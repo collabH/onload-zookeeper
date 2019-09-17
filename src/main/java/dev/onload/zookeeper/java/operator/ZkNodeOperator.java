@@ -3,9 +3,12 @@ package dev.onload.zookeeper.java.operator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author echo huang
@@ -18,6 +21,9 @@ public class ZkNodeOperator implements Watcher {
     private ZooKeeper zk = null;
     private static final Integer timeout = 5000;
     private static final String zkServerPath = "127.0.0.1:2181";
+
+    private static final CountDownLatch LATCH = new CountDownLatch(1);
+    private static final Stat stat = new Stat();
 
     public ZkNodeOperator() {
 
@@ -73,14 +79,108 @@ public class ZkNodeOperator implements Watcher {
 
     }
 
+    /**
+     * 修改节点数据
+     *
+     * @param path
+     * @param data
+     * @param version
+     */
+    public void setNode(String path, byte[] data, int version) {/*
+        try {
+
+            //同步修改
+            Stat stat = zk.setData(path, data, version);
+
+            log.warn("stat:{}", stat);
+        } catch (KeeperException | InterruptedException e) {
+            e.printStackTrace();
+        }*/
+        //异步修改
+        String ctx = "{'create':'success'}";
+        zk.setData(path, data, version, (rc, p, c, name) -> {
+            log.warn("创建节点:{}", p);
+            log.warn("rc:{},ctx:{},name:{}", rc, c, name);
+        }, ctx);
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteNode(String path, int version) {
+        try {
+            //同步删除
+            zk.delete(path, version);
+            //异步删除
+            //zk.delete(path, version, (i, s, o) -> log.warn("创建节点:{},{}.{}", i,s,o), "zhangsan");
+        } catch (InterruptedException | KeeperException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 查询
+     *
+     * @param path
+     * @param stat
+     * @return
+     */
+    public byte[] queryNode(String path, boolean watch, Stat stat) {
+        byte[] data = new byte[0];
+        try {
+            /**
+             * 参数
+             * path:节点路径
+             * watch:true或false 注册一个watch事件
+             * stat:状态
+             */
+            data = zk.getData(path, watch, stat);
+            log.warn(new String(data, Charset.defaultCharset()));
+            log.warn("version :{}", stat.getVersion());
+            LATCH.await();
+
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return data;
+    }
+
     @Override
     public void process(WatchedEvent watchedEvent) {
         log.warn("event:{}", watchedEvent);
+        try {
+            switch (watchedEvent.getType()) {
+                case NodeDataChanged:
+                    byte[] bytes = zk.getData("/name", false, stat);
+                    log.warn(new String(bytes, Charset.defaultCharset()));
+                    log.warn("version变化:{}", stat.getVersion());
+                    LATCH.countDown();
+                    break;
+                case NodeCreated:
+                    break;
+                case NodeDeleted:
+                    break;
+                case NodeChildrenChanged:
+                    break;
+                default:
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {
         ZkNodeOperator zkNodeOperator = new ZkNodeOperator(zkServerPath);
-        zkNodeOperator.createNode("/test1", "zhangsan".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE);
+        //zkNodeOperator.createNode("/test1", "zhangsan".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE);
+        //zkNodeOperator.setNode("/test1", "luoquanwg".getBytes(), 1);
+        //zkNodeOperator.deleteNode("/test1", 1);
+        zkNodeOperator.queryNode("/name", true, stat);
     }
 
 }
