@@ -150,6 +150,39 @@ public class ZkNodeOperator implements Watcher {
         return data;
     }
 
+    /**
+     * 查询子节点
+     *
+     * @param path
+     * @param watch
+     * @return
+     */
+    public List<String> queryChirldNode(String path, boolean watch) {
+        List<String> children = null;
+        try {
+            children = zk.getChildren(path, watch);
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return children;
+    }
+
+    public void isExists(String path, boolean watch) {
+        Stat stat = null;
+        try {
+            stat = zk.exists(path, watch);
+            log.warn(String.valueOf(stat.getVersion()));
+            Thread.sleep(3000);
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     @Override
     public void process(WatchedEvent watchedEvent) {
         log.warn("event:{}", watchedEvent);
@@ -180,7 +213,8 @@ public class ZkNodeOperator implements Watcher {
         //zkNodeOperator.createNode("/test1", "zhangsan".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE);
         //zkNodeOperator.setNode("/test1", "luoquanwg".getBytes(), 1);
         //zkNodeOperator.deleteNode("/test1", 1);
-        zkNodeOperator.queryNode("/name", true, stat);
+      //  zkNodeOperator.queryNode("/name", true, stat);
+        zkNodeOperator.isExists("/name",false);
     }
 
 }
