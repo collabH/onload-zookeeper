@@ -4,6 +4,7 @@ import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
+import org.apache.zookeeper.data.Stat;
 
 /**
  * @author echo huang
@@ -12,7 +13,7 @@ import org.apache.curator.retry.RetryNTimes;
  * @description curator操作类
  */
 public class CuratorOperator {
-    private CuratorFramework client = null;
+    public CuratorFramework client = null;
     private static final String zkConnection = "127.0.0.1:2181";
 
     public CuratorOperator() {
@@ -89,11 +90,34 @@ public class CuratorOperator {
          * guaranteed:防止发生网络抖动时，成功的请求可能没有返回客户端，guaranteed可以保证节点被删除
          * deletingChildrenIfNeeded:如果有子节点，就删除
          */
-        curatorOperator.client.delete()
-                .guaranteed()
-                .deletingChildrenIfNeeded()
-                .withVersion(2)
+//        curatorOperator.client.delete()
+//                .guaranteed()
+//                .deletingChildrenIfNeeded()
+//                .withVersion(2)
+//                .forPath(path);
+        //read node
+        /**
+         * storingStatIn:拉取stat值
+         */
+//        Stat stat = new Stat();
+//        byte[] bytes = curatorOperator.client
+//                .getData()
+//                .storingStatIn(stat)
+//                .forPath(path);
+//        System.out.println(new String(bytes, StandardCharsets.UTF_8));
+//        System.out.println(stat.getVersion());
+        //query childrenNode
+//        Stat stat = new Stat();
+//        List<String> childrenNodes = curatorOperator.client
+//                .getChildren()
+//                .storingStatIn(stat)
+//                .forPath("/super");
+//        childrenNodes.forEach(System.out::println);
+        //判断节点是否存在
+        Stat stat = curatorOperator.client
+                .checkExists()
                 .forPath(path);
+        System.out.println(stat == null ? "不存在" : stat.getVersion());
         Thread.sleep(3000);
         curatorOperator.close();
         System.out.println(curatorOperator.client.isStarted());
