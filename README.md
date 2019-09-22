@@ -711,3 +711,18 @@ public class CuratorAcl {
 
 }
 ```
+
+## 基于Curator的分布式锁测试
+```
+根据jmeter测试得到
+线程组设置如下:
+线程数:2
+Ramp-up:0
+结果如下:
+2019-09-22 21:13:57,405 [http-nio-9000-exec-3] [INFO] 获取锁成功
+2019-09-22 21:13:57,405 [http-nio-9000-exec-11] [INFO] 获取锁失败
+```
+
+**不足之处**
+* 获得锁通过CountDownLatch和死循环，每次计数器countDown后，就会new一个新的，如果突然大并发上来，就会new多个CountDownLatch对象，造成内存溢出危险
+* 并且全部都会阻塞在此，导致整个服务线程被打满，很有核心也会发生jvm线程阻塞，后期请求将会卡死在此
